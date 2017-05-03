@@ -1,0 +1,22 @@
+*.class
+
+# Package Files
+*.jar
+
+# Build artifacts
+build
+out
+
+# IntelliJ
+*.ipr
+*.iws
+*.iml
+*.idea
+workspace.xml
+atlassian-ide-plugin.xml
+
+# gradle
+.gradle
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
