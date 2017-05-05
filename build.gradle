@@ -39,20 +39,29 @@ sourceSets {
 }
 
 tasks.withType(Test) {
+
+    def getProjectPropertyOrDefault = { String propertyName, String defaultValue ->
+        project.hasProperty(propertyName) ? project.property(propertyName) : defaultValue
+    }
+
+    def getProjectPropertyOrNull = { String propertyName ->
+        project.hasProperty(propertyName) ? project.property(propertyName) : null
+    }
+
     systemProperties(
-            'org.mongodb.test.host': System.getProperty('org.mongodb.test.host', '127.0.0.1'),
-            'org.mongodb.test.port': System.getProperty('org.mongodb.test.port', '3307'),
-            'org.mongodb.test.ssl': System.getProperty('org.mongodb.test.ssl', 'false'),
-            'org.mongodb.test.database': System.getProperty('org.mongodb.test.database', 'use_test'),
-            'org.mongodb.test.sql': System.getProperty('org.mongodb.test.sql', 'select a from foo'),
+            'org.mongodb.test.host': getProjectPropertyOrDefault('org.mongodb.test.host', '127.0.0.1'),
+            'org.mongodb.test.port': getProjectPropertyOrDefault('org.mongodb.test.port', '3307'),
+            'org.mongodb.test.ssl': getProjectPropertyOrDefault('org.mongodb.test.ssl', 'false'),
+            'org.mongodb.test.database': getProjectPropertyOrDefault('org.mongodb.test.database', 'use_test'),
+            'org.mongodb.test.sql': getProjectPropertyOrDefault('org.mongodb.test.sql', 'select a from foo'),
 
-            'org.mongodb.test.user': System.getProperty('org.mongodb.test.user'),
-            'org.mongodb.test.password': System.getProperty('org.mongodb.test.password'),
+            'org.mongodb.test.user': getProjectPropertyOrNull('org.mongodb.test.user'),
+            'org.mongodb.test.password': getProjectPropertyOrNull('org.mongodb.test.password'),
 
-            'javax.net.ssl.trustStore': System.getProperty('javax.net.ssl.trustStore', "${System.getProperty('user.home')}/.keystore"),
-            'javax.net.ssl.keyStore': System.getProperty('javax.net.ssl.keyStore', "${System.getProperty('user.home')}/.keystore"),
-            'javax.net.ssl.keyStorePassword': System.getProperty('javax.net.ssl.keyStorePassword', 'changeit'),
-            'javax.net.ssl.trustStorePassword': System.getProperty('javax.net.ssl.trustStorePassword', 'changeit')
+            'javax.net.ssl.trustStore': getProjectPropertyOrDefault('javax.net.ssl.trustStore', "${System.getProperty('user.home')}/.keystore"),
+            'javax.net.ssl.keyStore': getProjectPropertyOrDefault('javax.net.ssl.keyStore', "${System.getProperty('user.home')}/.keystore"),
+            'javax.net.ssl.keyStorePassword': getProjectPropertyOrDefault('javax.net.ssl.keyStorePassword', 'changeit'),
+            'javax.net.ssl.trustStorePassword': getProjectPropertyOrDefault('javax.net.ssl.trustStorePassword', 'changeit'),
     )
 }
 
