@@ -24,7 +24,7 @@ sourceCompatibility = JavaVersion.VERSION_1_6
 targetCompatibility = JavaVersion.VERSION_1_6
 
 group = 'org.mongodb'
-archivesBaseName = 'mongosql-auth-mysql'
+archivesBaseName = 'mongosql-auth'
 version = '1.0-SNAPSHOT'
 
 dependencies {
