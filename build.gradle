@@ -116,6 +116,8 @@ task wrapper(type: Wrapper) {
 modifyPom {
     project {
 
+        name 'MongoSQL Authentication Plugin'
+        description 'MongoSQL Authentication Plugin for MySQL Connector/J'
         url 'https://github.com/mongodb/mongosql-java-auth'
 
         scm {
@@ -148,7 +150,7 @@ modifyPom { pom ->
 
 task uploadSnapshotArchives(dependsOn: uploadArchives) {
     if (!version.endsWith("-SNAPSHOT")) {
-        enabled = false;
-        dependsOn = [];
+        enabled = false
+        dependsOn = []
     }
 }
