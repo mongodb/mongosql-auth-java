@@ -28,6 +28,10 @@ SCRAM-SHA-1 and MONGODB-CR, and "$external" for PLAIN and GSSAPI. For example:
 
     username?source=somedb
 
+Optionally, if using GSSAPI, specify the service name via a query parameter on the user name.  The default service name is "mongosql". For example:
+
+    username?mechanism=GSSAPI&serviceName=myservicename
+    
 ## Notes
 
 * The SCRAM-SHA-1 mechanism hashes the passwords in the client plugin, so it can be used on an unencrypted connection without exposing 

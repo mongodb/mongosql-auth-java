@@ -33,12 +33,12 @@ final class Gssapi {
     private static final String SERVICE_NAME_DEFAULT_VALUE = "mongosql";
     private static final String GSSAPI_OID = "1.2.840.113554.1.2.2";
 
-    static SaslClient createSaslClient(final String user, final String hostName) throws SaslException {
+    static SaslClient createSaslClient(final String user, final String hostName, final String serviceName) throws SaslException {
         Map<String, Object> saslClientProperties = new HashMap<String, Object>();
         saslClientProperties.put(Sasl.MAX_BUFFER, "0");
         saslClientProperties.put(Sasl.CREDENTIALS, getGSSCredential(user));
-
-        return Sasl.createSaslClient(new String[]{"GSSAPI"}, user, SERVICE_NAME_DEFAULT_VALUE, hostName, saslClientProperties, null);
+        String saslServiceName = serviceName == null || serviceName.isEmpty() ? SERVICE_NAME_DEFAULT_VALUE : serviceName;
+        return Sasl.createSaslClient(new String[]{"GSSAPI"}, user, saslServiceName , hostName, saslClientProperties, null);
     }
 
     private static GSSCredential getGSSCredential(final String userName) throws SaslException {
