@@ -47,6 +47,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
     private String password;
     private boolean firstChallenge = true;
     private String hostName;
+    private String serviceName;
     private final List<SaslClient> saslClients = new ArrayList<SaslClient>();
 
     @Override
@@ -68,6 +69,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
     public void setAuthenticationParameters(final String user, final String password) {
         this.user = user.contains("?") ? user.substring(0, user.indexOf("?")) : user;
         this.password = password;
+        this.serviceName = findParameter("serviceName", user);
     }
 
     @Override
@@ -132,16 +134,52 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
         return user;
     }
 
+    String getServiceName() { return serviceName; }
+
     private SaslClient createSaslClient(final String mechanism) throws SaslException {
         if (mechanism.equals("SCRAM-SHA-1")) {
             return ScramSha1.createSaslClient(user, password);
         } else if (mechanism.equals("PLAIN")) {
             return Plain.createSaslClient(user, password);
         } else if (mechanism.equals("GSSAPI")) {
-            return Gssapi.createSaslClient(user, hostName);
+            return Gssapi.createSaslClient(user, hostName, serviceName);
         } else {
             throw new SaslException("Unsupported SASL mechanism " + mechanism);
         }
+    }
+
+    private String findParameter(final String target, final String search) {
+
+        if (search.indexOf(target) <= 0 ||
+            (search.charAt(search.indexOf(target) - 1) != '?' && search.charAt(search.indexOf(target) - 1) != '&')
+            ) {
+            return null;
+        }
+
+        int startIdx = search.indexOf(target) + target.length();
+
+        if (startIdx >= search.length() || search.charAt(startIdx) != '=') {
+            return null;
+        }
+
+
+        int paramStart = startIdx + 1;
+        int paramEnd = -1;
+
+
+        for (int i = paramStart; i < search.length(); i++) {
+
+            if (search.charAt(i) == '&') {
+                paramEnd = i;
+                break;
+            }
+        }
+
+        if (paramEnd == -1) {
+            paramEnd = search.length();
+        }
+
+        return search.substring(paramStart, paramEnd);
     }
 
     private byte[] getNextChallenge(final ByteBuffer fromServer) {

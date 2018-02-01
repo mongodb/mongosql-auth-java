@@ -29,10 +29,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+
 
 public class MongoSqlAuthenticationPluginTest {
 
@@ -67,10 +65,58 @@ public class MongoSqlAuthenticationPluginTest {
         MongoSqlAuthenticationPlugin plugin = new MongoSqlAuthenticationPlugin();
 
         // when
-        plugin.setAuthenticationParameters("testUser?mechanism=PLAIN&authSource=test", "pwd");
+        plugin.setAuthenticationParameters("testUser?apples?mechanism=PLAIN&authSource=test", "pwd");
 
         // then
         assertEquals("testUser", plugin.getUser());
+    }
+
+    @Test
+    public void shouldParseServiceNameWithMultipleQueryParameters() {
+        // given
+        MongoSqlAuthenticationPlugin plugin = new MongoSqlAuthenticationPlugin();
+
+        // when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&authSource=test&serviceName=blah", "pwd");
+
+        // then
+        assertEquals("blah", plugin.getServiceName());
+
+        // when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&serviceName=blah&stuff", "pwd");
+
+        // then
+        assertEquals("blah", plugin.getServiceName());
+
+        // when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&serviceName=", "pwd");
+
+        // then
+        assertEquals("", plugin.getServiceName());
+
+        // when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&serviceName=x&serviceName=y", "pwd");
+
+        // then
+        assertEquals("x", plugin.getServiceName());
+
+        // when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&stuffserviceName=x", "pwd");
+
+        // then
+        assertNull(plugin.getServiceName());
+
+        // when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&serviceNameBlah=x", "pwd");
+
+        // then
+        assertNull(plugin.getServiceName());
+
+        // when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI", "pwd");
+
+        // then
+        assertNull(plugin.getServiceName());
     }
 
     @Test
