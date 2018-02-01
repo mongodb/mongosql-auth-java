@@ -67,6 +67,7 @@ tasks.withType(Test) {
             'javax.security.auth.useSubjectCredsOnly':getProjectPropertyOrDefault('auth.useSubjectCredsOnly', 'false'),
             'java.security.krb5.kdc': getProjectPropertyOrNull('krb5.kdc'),
             'java.security.krb5.realm': getProjectPropertyOrNull('krb5.realm'),
+            'java.security.krb5.conf': getProjectPropertyOrNull('krb5.conf'),
             'java.security.auth.login.config': getProjectPropertyOrNull('auth.login.config')
     )
 }
