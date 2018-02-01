@@ -63,8 +63,8 @@ tasks.withType(Test) {
             'javax.net.ssl.keyStorePassword': getProjectPropertyOrDefault('javax.net.ssl.keyStorePassword', 'changeit'),
             'javax.net.ssl.trustStorePassword': getProjectPropertyOrDefault('javax.net.ssl.trustStorePassword', 'changeit'),
 
-            'sun.security.krb5.debug': getProjectPropertyOrDefault('sun.security.krb5.debug', 'false'),
-            'javax.security.auth.useSubjectCredsOnly': 'false',
+            'sun.security.krb5.debug': getProjectPropertyOrDefault('sun.security.krb5.debug', 'true'),
+            'javax.security.auth.useSubjectCredsOnly':getProjectPropertyOrDefault('auth.useSubjectCredsOnly', 'false'),
             'java.security.krb5.kdc': getProjectPropertyOrNull('krb5.kdc'),
             'java.security.krb5.realm': getProjectPropertyOrNull('krb5.realm'),
             'java.security.auth.login.config': getProjectPropertyOrNull('auth.login.config')
