@@ -159,10 +159,10 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
 
         if (!search.contains(target)) return "";
 
-        int startIdx = search.indexOf(target);
+        int startIdx = search.indexOf(target) + target.length();
         int paramStart = -1;
         int paramEnd = -1;
-        for (int i = startIdx + 1; i < search.length(); i++) {
+        for (int i = startIdx; i < search.length(); i++) {
             if (search.charAt(i) == '=') {
                 paramStart = i + 1;
             }
@@ -181,7 +181,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
             paramEnd = search.length();
         }
 
-        return  search.substring(paramStart, paramEnd);
+        return search.substring(paramStart, paramEnd);
     }
 
     private String readString(final ByteBuffer byteBuffer) {
