@@ -47,6 +47,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
     private String password;
     private boolean firstChallenge = true;
     private String hostName;
+    private String serviceName;
     private final List<SaslClient> saslClients = new ArrayList<SaslClient>();
 
     @Override
@@ -68,6 +69,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
     public void setAuthenticationParameters(final String user, final String password) {
         this.user = user.contains("?") ? user.substring(0, user.indexOf("?")) : user;
         this.password = password;
+        this.serviceName = findParameter("serviceName", user);
     }
 
     @Override
@@ -138,7 +140,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
         } else if (mechanism.equals("PLAIN")) {
             return Plain.createSaslClient(user, password);
         } else if (mechanism.equals("GSSAPI")) {
-            return Gssapi.createSaslClient(user, hostName);
+            return Gssapi.createSaslClient(user, hostName, serviceName);
         } else {
             throw new SaslException("Unsupported SASL mechanism " + mechanism);
         }
@@ -151,6 +153,35 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
         byte[] challengeBytes = new byte[fromServer.getInt()];
         fromServer.get(challengeBytes);
         return challengeBytes;
+    }
+
+    private String findParameter(final String target, final String search) {
+
+        if (!search.contains(target)) return "";
+
+        int startIdx = search.indexOf(target);
+        int paramStart = -1;
+        int paramEnd = -1;
+        for (int i = startIdx + 1; i < search.length(); i++) {
+            if (search.charAt(i) == '=') {
+                paramStart = i + 1;
+            }
+
+            if (search.charAt(i) == '&') {
+                paramEnd = i;
+                break;
+            }
+        }
+
+        if (paramStart == -1) {
+            return "";
+        }
+
+        if (paramEnd == -1) {
+            paramEnd = search.length();
+        }
+
+        return  search.substring(paramStart, paramEnd);
     }
 
     private String readString(final ByteBuffer byteBuffer) {
