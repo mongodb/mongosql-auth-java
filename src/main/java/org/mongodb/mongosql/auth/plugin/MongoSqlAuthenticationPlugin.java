@@ -134,6 +134,8 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
         return user;
     }
 
+    String getServiceName() { return serviceName; }
+
     private SaslClient createSaslClient(final String mechanism) throws SaslException {
         if (mechanism.equals("SCRAM-SHA-1")) {
             return ScramSha1.createSaslClient(user, password);
@@ -174,7 +176,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
 
         return search.substring(paramStart, paramEnd);
     }
-    
+
     private byte[] getNextChallenge(final ByteBuffer fromServer) {
         if (fromServer.remaining() == 0) {
             return new byte[0];
