@@ -146,15 +146,6 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
         }
     }
 
-    private byte[] getNextChallenge(final ByteBuffer fromServer) {
-        if (fromServer.remaining() == 0) {
-            return new byte[0];
-        }
-        byte[] challengeBytes = new byte[fromServer.getInt()];
-        fromServer.get(challengeBytes);
-        return challengeBytes;
-    }
-
     private String findParameter(final String target, final String search) {
 
         if (!search.contains(target)) return "";
@@ -182,6 +173,15 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
         }
 
         return search.substring(paramStart, paramEnd);
+    }
+    
+    private byte[] getNextChallenge(final ByteBuffer fromServer) {
+        if (fromServer.remaining() == 0) {
+            return new byte[0];
+        }
+        byte[] challengeBytes = new byte[fromServer.getInt()];
+        fromServer.get(challengeBytes);
+        return challengeBytes;
     }
 
     private String readString(final ByteBuffer byteBuffer) {
