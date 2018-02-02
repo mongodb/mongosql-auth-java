@@ -74,6 +74,30 @@ public class MongoSqlAuthenticationPluginTest {
     }
 
     @Test
+    public void shouldParseServiceNameWithMultipleQueryParameters() {
+        // given
+        MongoSqlAuthenticationPlugin plugin = new MongoSqlAuthenticationPlugin();
+
+        // when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&authSource=test&serviceName=blah", "pwd");
+
+        // then
+        assertEquals("blah", plugin.getServiceName());
+
+        //when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&serviceName=blah&stuff", "pwd");
+
+        //then
+        assertEquals("blah", plugin.getServiceName());
+
+        //when
+        plugin.setAuthenticationParameters("testUser?mechanism=GSSAPI&serviceName=", "pwd");
+
+        //then
+        assertEquals("", plugin.getServiceName());
+    }
+
+    @Test
     public void testAuthenticationWithMultipleIterations() throws SQLException {
         // given
         String mechanism = "PLAIN";
