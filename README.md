@@ -3,6 +3,7 @@ A MySQL authentication plugin that implements the client-side of MongoDB-support
 
 * SCRAM-SHA-1
 * PLAIN
+* GSSAPI (Kerberos)
 
 ## Usage
 
@@ -34,8 +35,6 @@ Optionally, if using GSSAPI, specify the service name via a query parameter on t
     
 ## Notes
 
-* The SCRAM-SHA-1 mechanism hashes the passwords in the client plugin, so it can be used on an unencrypted connection without exposing 
-the password.
-* The PLAIN mechanism sends the password in cleartext, so should only be used on an encrypted connection, though this is not enforced.
-
-
+* The SCRAM-SHA-1 mechanism hashes the passwords in the client plugin, so it can be used on an unencrypted connection without exposing the password (however, subsequent communication over that channel will be unencrypted).
+* The PLAIN mechanism sends the password in cleartext, so should only be used on an encrypted connection.
+* The GSSAPI mechanism sends the end-user's credentials to the mongosqld - allowing mongosqld to reuse those credentials to access MongoDB.
