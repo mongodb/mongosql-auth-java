@@ -226,7 +226,6 @@ final class ScramSha {
             }
         }
 
-        //        private byte[] hi(final String password, final byte[] salt, final int iterations) throws SaslException {
         private byte[] hi(final byte[] password, final byte[] salt, final int iterations) throws SaslException {
             try {
                 SecretKeySpec key = new SecretKeySpec(password, hmacAlgorithm);
