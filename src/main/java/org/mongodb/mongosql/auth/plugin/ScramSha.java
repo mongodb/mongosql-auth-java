@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2017 MongoDB, Inc.
+ * Copyright 2008-2018 MongoDB, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,48 +32,67 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.HashMap;
 import java.util.Random;
 
+import java.util.Arrays;
+
 import static org.mongodb.mongosql.auth.plugin.BufferHelper.UTF_8;
 import static org.mongodb.mongosql.auth.plugin.BufferHelper.writeBytes;
+import static java.lang.String.format;
 
 /**
- * An authentication plugin supporting the MongoDB SCRAM-SHA-1 SASL authentication mechanism.
+ * An authentication plugin supporting the MongoDB SCRAM-SHA SASL authentication mechanism.
  */
-final class ScramSha1 {
+final class ScramSha {
 
     interface RandomStringGenerator {
         String generate(int length);
     }
 
-    static SaslClient createSaslClient(final String user, final String password) {
-        return createSaslClient(user, password, new DefaultRandomStringGenerator());
+    static SaslClient createSaslClient(final String user, final String password, final String mechanism) {
+        return createSaslClient(user, password, mechanism, new DefaultRandomStringGenerator());
     }
 
-    static SaslClient createSaslClient(final String user, final String password, final RandomStringGenerator randomStringGenerator) {
-        return new ScramSha1SaslClient(user, randomStringGenerator, password);
+    static SaslClient createSaslClient(final String user, final String password, final String mechanism,
+                                       final RandomStringGenerator randomStringGenerator) {
+        return new ScramShaSaslClient(user, password, mechanism, randomStringGenerator);
     }
 
-    private static class ScramSha1SaslClient implements SaslClient {
+    private static class ScramShaSaslClient implements SaslClient {
         private static final String GS2_HEADER = "n,,";
         private static final int RANDOM_LENGTH = 24;
+        private static final String SHA_1 = "SCRAM-SHA-1";
+        private static final String SHA_256 = "SCRAM-SHA-256";
+        private static final byte[] INT_1 = new byte[]{0, 0, 0, 1};
 
         private final Base64Codec base64Codec;
         private final String user;
         private final RandomStringGenerator randomStringGenerator;
         private final String password;
+        private final String hmacAlgorithm;
+        private final String hAlgorithm;
+        private final String mechanism;
         private String clientFirstMessageBare;
         private String rPrefix;
         private byte[] serverSignature;
         private int step;
 
-        ScramSha1SaslClient(final String user, final RandomStringGenerator randomStringGenerator, final String password) {
+        ScramShaSaslClient(final String user, final String password, final String mechanism,
+                           final RandomStringGenerator randomStringGenerator) {
             this.user = user;
             this.randomStringGenerator = randomStringGenerator;
             this.password = password;
+            this.mechanism = mechanism;
             base64Codec = new Base64Codec();
+            if (mechanism.equals(SHA_1)) {
+                hmacAlgorithm = "HmacSHA1";
+                hAlgorithm = "SHA-1";
+            } else {
+                hmacAlgorithm = "HmacSHA256";
+                hAlgorithm = "SHA-256";
+            }
         }
 
         public String getMechanismName() {
-            return "SCRAM-SHA-1";
+            return hmacAlgorithm;
         }
 
         public boolean hasInitialResponse() {
@@ -97,7 +116,7 @@ final class ScramSha1 {
 
                 return new byte[0];
             } else {
-                throw new SaslException("Too many steps involved in the SCRAM-SHA-1 negotiation.");
+                throw new SaslException(format("Too many steps involved in the %s negotiation.", this.mechanism));
             }
         }
 
@@ -129,7 +148,6 @@ final class ScramSha1 {
 
             this.clientFirstMessageBare = userName + "," + nonce;
             String clientFirstMessage = GS2_HEADER + this.clientFirstMessageBare;
-
             return decodeUTF8(clientFirstMessage);
         }
 
@@ -137,23 +155,30 @@ final class ScramSha1 {
             String serverFirstMessage = encodeUTF8(challenge);
 
             HashMap<String, String> map = parseServerResponse(serverFirstMessage);
-            String r = map.get("r");
-            if (!r.startsWith(this.rPrefix)) {
+            String serverNonce = map.get("r");
+            if (!serverNonce.startsWith(this.rPrefix)) {
                 throw new SaslException("Server sent an invalid nonce.");
             }
 
-            String s = map.get("s");
-            String i = map.get("i");
+            String salt = map.get("s");
+            int iterationCount = Integer.parseInt(map.get("i"));
 
-            String channelBinding = "c=" + encodeBase64(decodeUTF8(GS2_HEADER));
-            String nonce = "r=" + r;
+            String channelBinding = "c=" + encodeBase64(GS2_HEADER);
+            String nonce = "r=" + serverNonce;
             String clientFinalMessageWithoutProof = channelBinding + "," + nonce;
+            String authMessage = this.clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
 
-            byte[] saltedPassword = hi(createAuthenticationHash(user, password), decodeBase64(s), Integer.parseInt(i));
+            String password = this.password;
+            if (this.mechanism.equals(SHA_1)) {
+                password = createAuthenticationHash(this.user, password);
+            } else {
+                password = SaslPrep.saslPrepStored(password);
+            }
+
+            byte[] saltedPassword = hi(decodeUTF8(password), decodeBase64(salt), iterationCount);
 
             byte[] clientKey = hmac(saltedPassword, "Client Key");
             byte[] storedKey = h(clientKey);
-            String authMessage = this.clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
             byte[] clientSignature = hmac(storedKey, authMessage);
             byte[] clientProof = xor(clientKey, clientSignature);
             byte[] serverKey = hmac(saltedPassword, "Server Key");
@@ -177,6 +202,10 @@ final class ScramSha1 {
             }
         }
 
+        private String encodeBase64(final String str) throws SaslException {
+            return this.base64Codec.encode(decodeUTF8(str));
+        }
+        
         private String encodeBase64(final byte[] bytes) {
             return this.base64Codec.encode(bytes);
         }
@@ -191,37 +220,43 @@ final class ScramSha1 {
 
         private byte[] h(final byte[] data) throws SaslException {
             try {
-                return MessageDigest.getInstance("SHA-1").digest(data);
+                return MessageDigest.getInstance(this.hAlgorithm).digest(data);
             } catch (NoSuchAlgorithmException e) {
-                throw new SaslException("SHA-1 could not be found.", e);
+                throw new SaslException(format("%s could not be found.", hAlgorithm), e);
             }
         }
 
-        private byte[] hi(final String password, final byte[] salt, final int iterations) throws SaslException {
-            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iterations, 20 * 8 /* 20 bytes */);
-
-            SecretKeyFactory keyFactory;
+        //        private byte[] hi(final String password, final byte[] salt, final int iterations) throws SaslException {
+        private byte[] hi(final byte[] password, final byte[] salt, final int iterations) throws SaslException {
             try {
-                keyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+                SecretKeySpec key = new SecretKeySpec(password, hmacAlgorithm);
+                Mac mac = Mac.getInstance(hmacAlgorithm);
+                mac.init(key);
+                mac.update(salt);
+                mac.update(INT_1);
+                byte[] result = mac.doFinal();
+                byte[] previous = null;
+                for (int i = 1; i < iterations; i++) {
+                    mac.update(previous != null ? previous : result);
+                    previous = mac.doFinal();
+                    xorInPlace(result, previous);
+                }
+                return result;
             } catch (NoSuchAlgorithmException e) {
-                throw new SaslException("Unable to find PBKDF2WithHmacSHA1.", e);
-            }
-
-            try {
-                return keyFactory.generateSecret(spec).getEncoded();
-            } catch (InvalidKeySpecException e) {
-                throw new SaslException("Invalid key spec for PBKDC2WithHmacSHA1.", e);
+                throw new SaslException(format("Algorithm for '%s' could not be found.", hmacAlgorithm), e);
+            } catch (InvalidKeyException e) {
+                throw new SaslException(format("Invalid key for %s", hmacAlgorithm), e);
             }
         }
 
         private byte[] hmac(final byte[] bytes, final String key) throws SaslException {
-            SecretKeySpec signingKey = new SecretKeySpec(bytes, "HmacSHA1");
+            SecretKeySpec signingKey = new SecretKeySpec(bytes, this.hmacAlgorithm);
 
             Mac mac;
             try {
-                mac = Mac.getInstance("HmacSHA1");
+                mac = Mac.getInstance(this.hmacAlgorithm);
             } catch (NoSuchAlgorithmException e) {
-                throw new SaslException("Could not find HmacSHA1.", e);
+                throw new SaslException(format("Could not find %s.", this.hmacAlgorithm), e);
             }
 
             try {
@@ -250,7 +285,18 @@ final class ScramSha1 {
         }
 
         private String prepUserName(final String userName) {
-            return userName.replace("=", "=3D").replace(",", "=2D");
+            String user = userName.replace("=", "=3D").replace(",", "=2D");
+            if (this.mechanism.equals(SHA_256)) {
+                user = SaslPrep.saslPrepStored(user);
+            }
+            return user;
+        }
+
+        private byte[] xorInPlace(final byte[] a, final byte[] b) {
+            for (int i = 0; i < a.length; i++) {
+                a[i] ^= b[i];
+            }
+            return a;
         }
 
         private byte[] xor(final byte[] a, final byte[] b) {
@@ -320,5 +366,5 @@ final class ScramSha1 {
         }
     }
 
-    private ScramSha1() {}
+    private ScramSha() {}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 MongoDB, Inc.
+ * Copyright 2018 MongoDB, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ package org.mongodb.mongosql.auth.plugin;
 import org.junit.Test;
 import org.mongodb.mongosql.auth.plugin.ScramSha.RandomStringGenerator;
 
+// import java.util.Arrays;
+
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
@@ -29,18 +31,18 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class ScramSha1Test {
+public class ScramSha256Test {
 
     @Test
     public void shouldAuthenticate() throws SaslException {
         // given
         String user = "user";
         String password = "pencil";
-        String mechanism = "SCRAM-SHA-1";
+        String mechanism = "SCRAM-SHA-256";
         RandomStringGenerator randomStringGenerator = new RandomStringGenerator() {
             @Override
             public String generate(final int length) {
-                return "fyko+d2lbbFgONRv9qkxdawL";
+                return "rOprNGfwEbeRWgbNEkqO";
             }
         };
 
@@ -54,22 +56,23 @@ public class ScramSha1Test {
 
         // then
         assertFalse(saslClient.isComplete());
-        String expectedResponseHex = "biwsbj11c2VyLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdM";
-        assertArrayEquals(parseBase64Binary(expectedResponseHex), response);
-
-        //when
-        String challengeHex = "cj1meWtvK2QybGJiRmdPTlJ2OXFreGRhd0xIbytWZ2s3cXZVT0tVd3V"
-                                      + "XTElXZzRsLzlTcmFHTUhFRSxzPXJROVpZM01udEJldVAzRTFURFZDNHc9PSxpPTEwMDAw";
-        response = saslClient.evaluateChallenge(parseBase64Binary(challengeHex));
-
-        // then
-        assertFalse(saslClient.isComplete());
-        expectedResponseHex = "Yz1iaXdzLHI9ZnlrbytkMmxiYkZnT05Sdjlxa3hkYXdMSG8rVmdrN3F"
-                                      + "2VU9LVXd1V0xJV2c0bC85U3JhR01IRUUscD1NQzJUOEJ2Ym1XUmNrRHc4b1dsNUlWZ2h3Q1k9";
+        String expectedResponseHex = "biwsbj11c2VyLHI9ck9wck5HZndFYmVSV2diTkVrcU8=";
         assertArrayEquals(parseBase64Binary(expectedResponseHex), response);
 
         // when
-        challengeHex = "dj1VTVdlSTI1SkQxeU5ZWlJNcFo0Vkh2aFo5ZTA9";
+        String challengeHex = "cj1yT3ByTkdmd0ViZVJXZ2JORWtxTyVodllEcFdVYTJSYVRDQWZ1eEZ"
+            + "JbGopaE5sRiRrMCxzPVcyMlphSjBTTlk3c29Fc1VFamI2Z1E9PSxpPTQwOTY=";
+        response = saslClient.evaluateChallenge(parseBase64Binary(challengeHex));
+        
+        // then
+        assertFalse(saslClient.isComplete());
+        expectedResponseHex = "Yz1iaXdzLHI9ck9wck5HZndFYmVSV2diTkVrcU8laHZZRHBXVWEyU"
+            + "mFUQ0FmdXhGSWxqKWhObEYkazAscD1kSHpiWmFwV0lrNGpVaE4rVXRlOXl0YWc5empmTU"
+            + "hnc3FtbWl6N0FuZFZRPQ==";
+        assertArrayEquals(parseBase64Binary(expectedResponseHex), response);
+
+        // when
+        challengeHex = "dj02cnJpVFJCaTIzV3BSUi93dHVwK21NaFVaVW4vZEI1bkxUSlJzamw5NUc0PQ==";
         response = saslClient.evaluateChallenge(parseBase64Binary(challengeHex));
 
         // then
