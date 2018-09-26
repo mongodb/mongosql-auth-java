@@ -109,8 +109,8 @@ tasks.withType(Checkstyle) {
 //////////////////////////////////////////
 // Root project configuration           //
 //////////////////////////////////////////
-task wrapper(type: Wrapper) {
-    gradleVersion = '3.4.1'
+wrapper {
+    gradleVersion = '4.10.1'
 }
 
 modifyPom {
