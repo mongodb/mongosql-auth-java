@@ -29,6 +29,7 @@ version = '1.2.0-SNAPSHOT'
 
 dependencies {
     compile 'mysql:mysql-connector-java:5.1.41'
+    compile 'javax.xml.bind:jaxb-api:2.3.0'
     testCompile 'junit:junit:4.12'
 }
 

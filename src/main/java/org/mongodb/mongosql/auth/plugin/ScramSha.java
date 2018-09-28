@@ -17,8 +17,6 @@
 package org.mongodb.mongosql.auth.plugin;
 
 import javax.crypto.Mac;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
@@ -28,11 +26,8 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
 import java.util.HashMap;
 import java.util.Random;
-
-import java.util.Arrays;
 
 import static org.mongodb.mongosql.auth.plugin.BufferHelper.UTF_8;
 import static org.mongodb.mongosql.auth.plugin.BufferHelper.writeBytes;
@@ -205,7 +200,7 @@ final class ScramSha {
         private String encodeBase64(final String str) throws SaslException {
             return this.base64Codec.encode(decodeUTF8(str));
         }
-        
+
         private String encodeBase64(final byte[] bytes) {
             return this.base64Codec.encode(bytes);
         }

@@ -63,7 +63,7 @@ public class ScramSha256Test {
         String challengeHex = "cj1yT3ByTkdmd0ViZVJXZ2JORWtxTyVodllEcFdVYTJSYVRDQWZ1eEZ"
             + "JbGopaE5sRiRrMCxzPVcyMlphSjBTTlk3c29Fc1VFamI2Z1E9PSxpPTQwOTY=";
         response = saslClient.evaluateChallenge(parseBase64Binary(challengeHex));
-        
+
         // then
         assertFalse(saslClient.isComplete());
         expectedResponseHex = "Yz1iaXdzLHI9ck9wck5HZndFYmVSV2diTkVrcU8laHZZRHBXVWEyU"

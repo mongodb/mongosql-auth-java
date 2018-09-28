@@ -38,7 +38,7 @@ final class Gssapi {
         saslClientProperties.put(Sasl.MAX_BUFFER, "0");
         saslClientProperties.put(Sasl.CREDENTIALS, getGSSCredential(user));
         String saslServiceName = serviceName == null || serviceName.isEmpty() ? SERVICE_NAME_DEFAULT_VALUE : serviceName;
-        return Sasl.createSaslClient(new String[]{"GSSAPI"}, user, saslServiceName , hostName, saslClientProperties, null);
+        return Sasl.createSaslClient(new String[]{"GSSAPI"}, user, saslServiceName, hostName, saslClientProperties, null);
     }
 
     private static GSSCredential getGSSCredential(final String userName) throws SaslException {
