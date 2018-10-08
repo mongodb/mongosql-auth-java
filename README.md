@@ -34,8 +34,6 @@ Optionally, if using GSSAPI, specify the service name via a query parameter on t
 
     username?mechanism=GSSAPI&serviceName=myservicename
 
-SCRAM-SHA-256 is now a supported authentication mechanism.
-    
 ## Notes
 
 * The SCRAM-SHA-1 and SCRAM-SHA-256 mechanisms hash the passwords in the client plugin, so it can be used on an unencrypted connection without exposing the password (however, subsequent communication over that channel will be unencrypted).

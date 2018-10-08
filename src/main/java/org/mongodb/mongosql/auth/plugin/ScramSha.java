@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2018 MongoDB, Inc.
+ * Copyright 2008-present MongoDB, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,26 +42,40 @@ final class ScramSha {
         String generate(int length);
     }
 
+    public interface AuthenticationHashGenerator {
+        String generate(final String user, final String password) throws SaslException, IllegalArgumentException;
+    }
+
     static SaslClient createSaslClient(final String user, final String password, final String mechanism) {
-        return createSaslClient(user, password, mechanism, new DefaultRandomStringGenerator());
+        return createSaslClient(user, password, mechanism, new DefaultRandomStringGenerator(), getAuthenticationHashGenerator(mechanism));
     }
 
     static SaslClient createSaslClient(final String user, final String password, final String mechanism,
                                        final RandomStringGenerator randomStringGenerator) {
-        return new ScramShaSaslClient(user, password, mechanism, randomStringGenerator);
+        return createSaslClient(user, password, mechanism, randomStringGenerator, getAuthenticationHashGenerator(mechanism));
+    }
+
+    static SaslClient createSaslClient(final String user, final String password, final String mechanism,
+                                       final RandomStringGenerator randomStringGenerator,
+                                       final AuthenticationHashGenerator authenticationHashGenerator) {
+        return new ScramShaSaslClient(user, password, mechanism, randomStringGenerator,
+                                      authenticationHashGenerator);
     }
 
     private static class ScramShaSaslClient implements SaslClient {
         private static final String GS2_HEADER = "n,,";
         private static final int RANDOM_LENGTH = 24;
+        private static final int MINIMUM_ITERATION_COUNT = 4096;
         private static final String SHA_1 = "SCRAM-SHA-1";
         private static final String SHA_256 = "SCRAM-SHA-256";
         private static final byte[] INT_1 = new byte[]{0, 0, 0, 1};
 
         private final Base64Codec base64Codec;
         private final String user;
-        private final RandomStringGenerator randomStringGenerator;
         private final String password;
+        private final RandomStringGenerator randomStringGenerator;
+        private final AuthenticationHashGenerator authenticationHashGenerator;
+
         private final String hmacAlgorithm;
         private final String hAlgorithm;
         private final String mechanism;
@@ -71,11 +85,15 @@ final class ScramSha {
         private int step;
 
         ScramShaSaslClient(final String user, final String password, final String mechanism,
-                           final RandomStringGenerator randomStringGenerator) {
+                           final RandomStringGenerator randomStringGenerator,
+                           final AuthenticationHashGenerator authenticationHashGenerator
+                           ) {
             this.user = user;
-            this.randomStringGenerator = randomStringGenerator;
             this.password = password;
             this.mechanism = mechanism;
+            this.randomStringGenerator = randomStringGenerator;
+            this.authenticationHashGenerator = authenticationHashGenerator;
+
             base64Codec = new Base64Codec();
             if (mechanism.equals(SHA_1)) {
                 hmacAlgorithm = "HmacSHA1";
@@ -157,16 +175,17 @@ final class ScramSha {
 
             String salt = map.get("s");
             int iterationCount = Integer.parseInt(map.get("i"));
+            if (iterationCount < MINIMUM_ITERATION_COUNT) {
+                throw new SaslException("Invalid iteration count.");
+            }
 
             String channelBinding = "c=" + encodeBase64(GS2_HEADER);
             String nonce = "r=" + serverNonce;
             String clientFinalMessageWithoutProof = channelBinding + "," + nonce;
             String authMessage = this.clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
 
-            String password = this.password;
-            if (this.mechanism.equals(SHA_1)) {
-                password = createAuthenticationHash(this.user, password);
-            } else {
+            String password = authenticationHashGenerator.generate(this.user, this.password);
+            if (this.mechanism.equals(SHA_256)) {
                 password = SaslPrep.saslPrepStored(password);
             }
 
@@ -279,10 +298,7 @@ final class ScramSha {
         }
 
         private String prepUserName(final String userName) {
-            String user = userName.replace("=", "=3D").replace(",", "=2D");
-            if (this.mechanism.equals(SHA_256)) {
-                user = SaslPrep.saslPrepStored(user);
-            }
+            String user = userName.replace("=", "=3D").replace(",", "=2C");
             return user;
         }
 
@@ -301,29 +317,6 @@ final class ScramSha {
             }
 
             return result;
-        }
-
-        private String createAuthenticationHash(final String user, final String password) throws SaslException {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(user.length() + 20 + password.length());
-            writeBytes(baos, user.getBytes(UTF_8));
-            writeBytes(baos, ":mongo:".getBytes(UTF_8));
-            writeBytes(baos, password.getBytes(UTF_8));
-
-            return hexMD5(baos.toByteArray());
-        }
-
-        private String hexMD5(final byte[] data) throws SaslException {
-            try {
-                MessageDigest md5 = MessageDigest.getInstance("MD5");
-
-                md5.reset();
-                md5.update(data);
-                byte[] digest = md5.digest();
-
-                return toHex(digest);
-            } catch (NoSuchAlgorithmException e) {
-                throw new SaslException("MD5 is an unsupported digest type", e);
-            }
         }
 
         private String toHex(final byte[] bytes) {
@@ -358,6 +351,67 @@ final class ScramSha {
             }
             return new String(text);
         }
+    }
+
+    private static final AuthenticationHashGenerator DEFAULT_AUTHENTICATION_HASH_GENERATOR =  new AuthenticationHashGenerator() {
+        @Override
+        public String generate(final String user, final String password) throws SaslException, IllegalArgumentException {
+            if (password == null) {
+                throw new IllegalArgumentException("Password must not be null");
+            }
+            return password;
+        }
+    };
+
+    private static final AuthenticationHashGenerator LEGACY_AUTHENTICATION_HASH_GENERATOR =  new AuthenticationHashGenerator() {
+        @Override
+        public String generate(final String user, final String password) throws SaslException, IllegalArgumentException {
+            // Username and password must not be modified going into the hash.
+            if (user == null || password == null) {
+                throw new IllegalArgumentException("Username and password must not be null");
+            }
+            return ScramSha.createAuthenticationHash(user, password);
+        }
+    };
+
+    private static AuthenticationHashGenerator getAuthenticationHashGenerator(final String authenticationMechanism) {
+        return authenticationMechanism.equals("SCRAM-SHA-1") ? LEGACY_AUTHENTICATION_HASH_GENERATOR : DEFAULT_AUTHENTICATION_HASH_GENERATOR;
+    }
+
+    private static String createAuthenticationHash(final String user, final String password) throws SaslException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(user.length() + 20 + password.length());
+        writeBytes(baos, user.getBytes(UTF_8));
+        writeBytes(baos, ":mongo:".getBytes(UTF_8));
+        writeBytes(baos, password.getBytes(UTF_8));
+
+        return hexMD5(baos.toByteArray());
+    }
+
+    private static String hexMD5(final byte[] data) throws SaslException {
+        try {
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+
+            md5.reset();
+            md5.update(data);
+            byte[] digest = md5.digest();
+
+            return toHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new SaslException("MD5 is an unsupported digest type", e);
+        }
+    }
+
+    private static String toHex(final byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (final byte b : bytes) {
+            String s = Integer.toHexString(0xff & b);
+
+            if (s.length() < 2) {
+                sb.append("0");
+            }
+            sb.append(s);
+        }
+        return sb.toString();
     }
 
     private ScramSha() {}

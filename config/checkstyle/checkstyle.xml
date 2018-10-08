@@ -38,7 +38,7 @@
           </pre>
         -->
         <property name="format"
-                  value="^(//| \*) Copyright (\([cC]\) )?[\d]{4}(\-[\d]{4})? (MongoDB, Inc\.).*$" />
+                  value="^(//| \*) Copyright (\([cC]\) )?[\d]{4}(\-(([\d]{4})|(present)))? (MongoDB, Inc\.).*$" />
         <property name="minimum" value="1" />
         <property name="maximum" value="10" />
         <property name="message" value="MongoDB copyright is missing or malformed." />
