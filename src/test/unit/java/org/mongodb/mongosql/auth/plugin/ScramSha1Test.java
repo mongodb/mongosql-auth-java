@@ -18,7 +18,7 @@
 package org.mongodb.mongosql.auth.plugin;
 
 import org.junit.Test;
-import org.mongodb.mongosql.auth.plugin.ScramSha1.RandomStringGenerator;
+import org.mongodb.mongosql.auth.plugin.ScramSha.RandomStringGenerator;
 
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
@@ -36,6 +36,7 @@ public class ScramSha1Test {
         // given
         String user = "user";
         String password = "pencil";
+        String mechanism = "SCRAM-SHA-1";
         RandomStringGenerator randomStringGenerator = new RandomStringGenerator() {
             @Override
             public String generate(final int length) {
@@ -43,7 +44,7 @@ public class ScramSha1Test {
             }
         };
 
-        SaslClient saslClient = ScramSha1.createSaslClient(user, password, randomStringGenerator);
+        SaslClient saslClient = ScramSha.createSaslClient(user, password, mechanism, randomStringGenerator);
 
         // then
         assertFalse(saslClient.isComplete());

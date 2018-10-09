@@ -2,6 +2,7 @@
 A MySQL authentication plugin that implements the client-side of MongoDB-supported authentication mechanisms, including
 
 * SCRAM-SHA-1
+* SCRAM-SHA-256
 * PLAIN
 * GSSAPI (Kerberos)
 
@@ -12,7 +13,7 @@ Include this library in the classpath.  The Maven coordinates are:
     <dependency>
         <groupId>org.mongodb</groupId>
         <artifactId>mongosql-auth</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
     </dependency>
 
 Next, add a reference to the authentication plugin via the MySQL connection string:
@@ -32,9 +33,9 @@ SCRAM-SHA-1 and MONGODB-CR, and "$external" for PLAIN and GSSAPI. For example:
 Optionally, if using GSSAPI, specify the service name via a query parameter on the user name.  The default service name is "mongosql". For example:
 
     username?mechanism=GSSAPI&serviceName=myservicename
-    
+
 ## Notes
 
-* The SCRAM-SHA-1 mechanism hashes the passwords in the client plugin, so it can be used on an unencrypted connection without exposing the password (however, subsequent communication over that channel will be unencrypted).
+* The SCRAM-SHA-1 and SCRAM-SHA-256 mechanisms hash the passwords in the client plugin, so it can be used on an unencrypted connection without exposing the password (however, subsequent communication over that channel will be unencrypted).
 * The PLAIN mechanism sends the password in cleartext, so should only be used on an encrypted connection.
 * The GSSAPI mechanism sends the end-user's credentials to the mongosqld - allowing mongosqld to reuse those credentials to access MongoDB.
