@@ -318,19 +318,6 @@ final class ScramSha {
 
             return result;
         }
-
-        private String toHex(final byte[] bytes) {
-            StringBuilder sb = new StringBuilder();
-            for (final byte b : bytes) {
-                String s = Integer.toHexString(0xff & b);
-
-                if (s.length() < 2) {
-                    sb.append("0");
-                }
-                sb.append(s);
-            }
-            return sb.toString();
-        }
     }
 
     private static class DefaultRandomStringGenerator implements RandomStringGenerator {
