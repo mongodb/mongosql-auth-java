@@ -13,7 +13,7 @@ Include this library in the classpath.  The Maven coordinates are:
     <dependency>
         <groupId>org.mongodb</groupId>
         <artifactId>mongosql-auth</artifactId>
-        <version>1.1.0</version>
+        <version>1.2.0</version>
     </dependency>
 
 Next, add a reference to the authentication plugin via the MySQL connection string:
