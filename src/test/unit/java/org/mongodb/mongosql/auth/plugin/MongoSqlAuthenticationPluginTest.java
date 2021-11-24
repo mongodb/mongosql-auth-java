@@ -17,7 +17,8 @@
 
 package org.mongodb.mongosql.auth.plugin;
 
-import com.mysql.jdbc.Buffer;
+import com.mysql.cj.protocol.Message;
+import com.mysql.cj.protocol.a.NativePacketPayload;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -132,8 +133,8 @@ public class MongoSqlAuthenticationPluginTest {
         MongoSqlAuthenticationPlugin plugin = new MongoSqlAuthenticationPlugin();
         plugin.setAuthenticationParameters(user + "?mechanism=" + mechanism, pwd);
 
-        Buffer fromServer = new Buffer(new byte[21]);
-        List<Buffer> toServer = new ArrayList<Buffer>();
+        NativePacketPayload fromServer = new NativePacketPayload(new byte[21]);
+        List<NativePacketPayload> toServer = new ArrayList<NativePacketPayload>();
 
         // when initial challenge
         boolean done = plugin.nextAuthenticationStep(fromServer, toServer);
@@ -147,8 +148,8 @@ public class MongoSqlAuthenticationPluginTest {
         buffer.put(mechanism.getBytes(UTF_8));
         buffer.put((byte) 0);                  // null terminate the mechanism
         buffer.put(intAsByteArray(2));   // 2 iterations
-        fromServer = new Buffer(buffer.array());
-        toServer = new ArrayList<Buffer>();
+        fromServer = new NativePacketPayload(buffer.array());
+        toServer = new ArrayList<NativePacketPayload>();
 
         // when
         done = plugin.nextAuthenticationStep(fromServer, toServer);
