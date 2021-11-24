@@ -17,11 +17,16 @@
 
 package org.mongodb.mongosql.auth.plugin;
 
-import com.mysql.jdbc.AuthenticationPlugin;
-import com.mysql.jdbc.Buffer;
-import com.mysql.jdbc.Connection;
-import com.mysql.jdbc.SQLError;
-import com.mysql.jdbc.StringUtils;
+import com.mysql.cj.exceptions.MysqlErrorNumbers;
+import com.mysql.cj.protocol.AuthenticationPlugin;
+import com.mysql.cj.protocol.Message;
+import com.mysql.cj.jdbc.exceptions.SQLError;
+import com.mysql.cj.jdbc.JdbcConnection;
+import com.mysql.cj.protocol.Protocol;
+import com.mysql.cj.protocol.a.NativePacketPayload;
+import com.mysql.cj.util.StringUtils;
+
+
 
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
@@ -42,7 +47,7 @@ import static org.mongodb.mongosql.auth.plugin.BufferHelper.writeInt;
  *
  * @since 1.0
  */
-public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
+public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin<NativePacketPayload> {
     private String user;
     private String password;
     private boolean firstChallenge = true;
@@ -72,10 +77,12 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
         this.serviceName = findParameter("serviceName", user);
     }
 
+
     @Override
-    public void init(final Connection conn, final Properties props) throws SQLException {
-        this.hostName = conn.getHost();
+    public void init(Protocol<NativePacketPayload> protocol){
+        this.hostName=protocol.getSocketConnection().getHost();
     }
+
 
     @Override
     public void destroy() {
@@ -89,21 +96,22 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
     }
 
     @Override
-    public boolean nextAuthenticationStep(final Buffer fromServer, final List<Buffer> toServer) throws SQLException {
+    public boolean nextAuthenticationStep(NativePacketPayload fromServer, List<NativePacketPayload>  toServer)  {
         try {
             toServer.clear();
 
             if (fromServer == null) {
-                throw SQLError.createSQLException("Unexpected empty challenge ", SQLError.SQL_STATE_GENERAL_ERROR, null);
+                return false;
+//                throw SQLError.createSQLException("Unexpected empty challenge ", MysqlErrorNumbers.SQL_STATE_GENERAL_ERROR, null);
             }
 
             if (firstChallenge) {
                 firstChallenge = false;
-                toServer.add(new Buffer(new byte[0]));
+                toServer.add(new NativePacketPayload(new byte[0]));
                 return true;
             }
 
-            ByteBuffer byteBuffer = ByteBuffer.wrap(fromServer.getByteBuffer(), 0, fromServer.getBufLength());
+            ByteBuffer byteBuffer = ByteBuffer.wrap(fromServer.getByteBuffer(), 0, fromServer.getByteBuffer().length);
             byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
             if (saslClients.isEmpty()) {
                 String mechanism = readString(byteBuffer);
@@ -112,6 +120,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
                     saslClients.add(createSaslClient(mechanism));
                 }
             }
+
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             for (SaslClient saslClient : saslClients) {
@@ -122,11 +131,14 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
                 writeBytes(baos, response);
             }
 
-            toServer.add(new Buffer(baos.toByteArray()));
+            toServer.add(new NativePacketPayload(baos.toByteArray()));
 
             return true; // The implementation of the authentication handshake requires that this method always returns true
         } catch (SaslException e) {
-            throw SQLError.createSQLException("mongosql_auth authentication exception ", SQLError.SQL_STATE_GENERAL_ERROR, e, null);
+            return false;
+//            throw SQLError.createSQLException("mongosql_auth authentication exception ", MysqlErrorNumbers.SQL_STATE_GENERAL_ERROR, e,null);
+        }catch (SQLException e1){
+            return false;
         }
     }
 
